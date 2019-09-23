@@ -5,12 +5,13 @@
 
 
 unsigned char gchRobotCmdStatus;
+char * game;
 void askInput(){
 	/*Ask input from user*/
 	gchRobotCmdStatus = '0';
 	char userInput;
 	userInput = 'Q' ;
-	printf("MOVEMENTS:\nNorth [N]\nSouth [S]\nEast [E]\nWest [W]\n\nInput Move:\n");
+	printf("\nMOVEMENTS:\nNorth [N]\nSouth [S]\nEast [E]\nWest [W]\n\nInput Move:\n");
 	while(!(userInput == 'N' || userInput == 'S' || userInput == 'E' || userInput == 'W')){
 		scanf("%c",&userInput);
 	}
@@ -48,8 +49,7 @@ void setCMD_TX(){
 }
 void printBinary(){
 	/*Just for printing the status in binary form*/
-	gchRobotCmdStatus=gchRobotCmdStatus-48;
-	int n = gchRobotCmdStatus;
+	int n = gchRobotCmdStatus-48;
 	int c,k;
 	printf("\nBinary Form:");
 	for (c = 7; c >= 0; c--){
@@ -61,11 +61,44 @@ void printBinary(){
   	}	
 }
 
+void checkMOV_END_ERR(){
+	int n = gchRobotCmdStatus-48;
+	int c,k;
+	for (c = 7; c >= 0; c--){
+    	k = n >> c;
+    	if (k & 1){
+    		/*1*/
+    		if(c==6){
+    			game="wall";
+			}
+			else if(c==5){
+				game="end";
+			}
+		}
+		else{	/*0*/
+			if(c==5){
+				game="proceed";
+			}	
+		}	
+  	}
+}
+
 void *controlThread(void *vargp) 
-{ 
-    askInput();
-    setCMD_TX();
-    printBinary();
+{
+	while(game!="end"){
+		askInput();
+    	setCMD_TX();
+    	sleep(5);
+		checkMOV_END_ERR();
+    	printBinary();
+    	if(game=="wall"){
+    		printf("\nHit a wall! Try another Direction.");
+		}
+		else if(game=="proceed"){
+			printf("\nStill a long way to go! Input direction.");
+		}
+	}
+    printf("Maze Solved!");
     return NULL; 
 }
 
