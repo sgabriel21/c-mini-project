@@ -6,6 +6,8 @@
 
 unsigned char gchRobotCmdStatus;
 void askInput(){
+	/*Ask input from user*/
+	gchRobotCmdStatus = '0';
 	char userInput;
 	userInput = 'Q' ;
 	printf("MOVEMENTS:\nNorth [N]\nSouth [S]\nEast [E]\nWest [W]\n\nInput Move:\n");
@@ -15,42 +17,68 @@ void askInput(){
 	
 	switch(userInput){
 		case 'N':
-			gchRobotCmdStatus='1';
-			printf("Code: 00");
+			gchRobotCmdStatus=gchRobotCmdStatus|'0';
+			setDirection(0);
 			break;
 		case 'S':
-			/*robotDirection('01')*/
-			printf("Code: 01");
+			setDirection(8);
 			break;
 		case 'E':
-			/*robotDirection('10')*/
-			printf("Code: 10");
+			setDirection(16);
 			break;
 		case 'W':
-			/*robotDirection('11')*/
-			printf("Code: 11");
+			setDirection(24);
 			break;
 		default:
 			printf("Not Valid");
 	}
 }
 
+void setDirection(int direct){
+	/*Set direction; convert char to int and apply bitwise OR then convert back to char*/
+	gchRobotCmdStatus=gchRobotCmdStatus-48;
+	int newStatus = gchRobotCmdStatus | direct;
+	gchRobotCmdStatus=newStatus+48;
+	
+}
+void setCMD_TX(){
+	gchRobotCmdStatus=gchRobotCmdStatus-48;
+	int newStatus = gchRobotCmdStatus | 128;
+	gchRobotCmdStatus=newStatus+48;
+}
+void printBinary(){
+	/*Just for printing the status in binary form*/
+	gchRobotCmdStatus=gchRobotCmdStatus-48;
+	int n = gchRobotCmdStatus;
+	int c,k;
+	printf("\nBinary Form:");
+	for (c = 7; c >= 0; c--){
+    	k = n >> c;
+    	if (k & 1)
+      		printf("1");
+    	else
+      		printf("0");
+  	}	
+}
+
 void *controlThread(void *vargp) 
 { 
     askInput();
-    printf("gchRobotCmdStatus:%c",gchRobotCmdStatus);
+    setCMD_TX();
+    printBinary();
     return NULL; 
-} 
+}
+
+
   
 
 
 int main () {
-	gchRobotCmdStatus = '0000000';
-	pthread_t thread_id; 
-    printf("Before Thread\n"); 
+	pthread_t thread_id;
+	/*Create Control Thread*/
     pthread_create(&thread_id, NULL, controlThread, NULL); 
     pthread_join(thread_id, NULL); 
-    printf("After Thread\n"); 
+    printf("\nDone Control Thread\n"); 
 	return 0;
 }
 
