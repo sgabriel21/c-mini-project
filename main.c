@@ -18,7 +18,6 @@ void askInput(){
 	
 	switch(userInput){
 		case 'N':
-			gchRobotCmdStatus=gchRobotCmdStatus|'0';
 			setDirection(0);
 			break;
 		case 'S':
