@@ -1,0 +1,251 @@
+#include <pthread.h>
+#include <conio.h>
+#include <unistd.h>
+#include <stdio.h>
+
+unsigned char gchRobotCmdStatus;
+char * game;
+int currentX, currentY;
+FILE *fp;
+char line;
+int length = 0, i;
+char *size;
+char *maze;
+char *sizeColumn;
+char *startX;
+char *startY;
+char *endX;
+char *endY;
+
+int row, mazeColumn, x, y, pointer;
+int MOV_END = 0;
+int point = 0;
+
+void askInput(){
+	/*Ask input from user*/
+	gchRobotCmdStatus = '0';
+	char userInput;
+	userInput = 'Q' ;
+	printf("\nMOVEMENTS:\nNorth [N]\nSouth [S]\nEast [E]\nWest [W]\n\nInput Move:\n");
+	while(!(userInput == 'N' || userInput == 'S' || userInput == 'E' || userInput == 'W')){
+		scanf("%c",&userInput);
+	}
+	
+	switch(userInput){
+		case 'N':
+			setDirection(0);
+			setCMD_TX();
+			break;
+		case 'S':
+			setDirection(8);
+			setCMD_TX();
+			break;
+		case 'E':
+			setDirection(16);
+			setCMD_TX();
+			break;
+		case 'W':
+			setDirection(24);
+			setCMD_TX();
+			break;
+		default:
+			printf("Not Valid");
+	}
+}
+
+void setDirection(int direct){
+	/*Set direction; convert char to int and apply bitwise OR then convert back to char*/
+	gchRobotCmdStatus=gchRobotCmdStatus-48;
+	int newStatus = gchRobotCmdStatus | direct;
+	gchRobotCmdStatus=newStatus+48;
+	
+}
+void setCMD_TX(){
+	gchRobotCmdStatus=gchRobotCmdStatus-48;
+	int newStatus = gchRobotCmdStatus | 128;
+	gchRobotCmdStatus=newStatus+48;
+}
+void printBinary(){
+	/*Just for printing the status in binary form*/
+	int n = gchRobotCmdStatus-48;
+	int c,k;
+	printf("\nBinary Form:");
+	for (c = 7; c >= 0; c--){
+    	k = n >> c;
+    	if (k & 1)
+      		printf("1");
+    	else
+      		printf("0");
+  	}	
+}
+
+void checkMOV_END_ERR(){
+	int n = gchRobotCmdStatus-48;
+	int c,k;
+	for (c = 7; c >= 0; c--){
+    	k = n >> c;
+    	if (k & 1){
+    		/*1*/
+    		if(c==6){
+    			game="wall";
+			}
+			else if(c==5){
+				game="end";
+			}
+		}
+		else{	/*0*/
+			if(c==5){
+				game="proceed";
+			}	
+		}	
+  	}
+}
+
+void *controlThread(void *vargp) 
+{
+	while(game!="end"){
+		askInput();
+		printBinary();
+    	sleep(5);
+		checkMOV_END_ERR();
+    	if(game=="wall"){
+    		printf("\nHit a wall! Try another Direction.");
+		}
+		else if(game=="proceed"){
+			printf("\nStill a long way to go! Input direction.");
+		}
+	}
+    printf("Maze Solved!");
+    return NULL; 
+}
+	
+void getMaze(){
+fp = fopen("maze.txt", "r");
+if (fp == NULL){
+	printf("Maze file is empty.\n");
+	return 1;
+}
+
+
+size = (char*) malloc(sizeof(char)*length);
+maze = (char*) malloc(sizeof(char)*length);
+sizeColumn = (char*) malloc(sizeof(char)*length);
+startX = (char*) malloc(sizeof(char)*length);
+startY = (char*) malloc(sizeof(char)*length);
+endX = (char*) malloc(sizeof(char)*length);
+endY = (char*) malloc(sizeof(char)*length);
+	
+	
+if(fp != NULL){
+	fgets(size, 40, fp);
+	fgets(maze, 40, fp);
+	fgets(sizeColumn, 40, fp);
+	fgets(startX, 3, fp);
+	fgets(startY, 4, fp);
+	fgets(endX, 3, fp);
+	fgets(endY, 4, fp);
+	printf("The size of maze is: %sThe maze data is: %sThe number of columns is: %s", size, maze, sizeColumn);
+	printf("The starting coordinate is: %s %s", startX, startY);
+	printf("The ending coordinate is: %s %s\n", endX, endY);
+}
+	
+row = atoi(size);
+mazeColumn = atoi(sizeColumn);
+
+printf("\nThe maze is: \n");
+for (x = 0; x<= row/mazeColumn; x++){
+	for(y = 0; y< mazeColumn; y++){
+		printf("%c", maze[pointer]);
+		pointer++;
+	}
+	printf("\n");
+} 
+	
+fclose(fp);
+}
+
+void getMove(){
+	int direction = gchRobotCmdStatus- 46 ;//& 24
+	int directPointer = 0, newgchRobotCmdStatus;
+	printf("Direction: %d\n", direction);
+	int sizeColumn1 = atoi(sizeColumn);
+	if (direction == 0){
+		directPointer =directPointer - sizeColumn1;
+		printf("north\n");
+		if (maze[directPointer] == 1){
+			currentY =- 1;
+		}
+		else{
+			newgchRobotCmdStatus = gchRobotCmdStatus | 64;
+			gchRobotCmdStatus = newgchRobotCmdStatus;
+		}
+	} 
+	if (direction == 8){
+		directPointer = directPointer + sizeColumn1;
+		printf("south\n");
+		if (maze[directPointer] == 1){
+			currentY =+ 1;
+		}
+		else{
+			newgchRobotCmdStatus = gchRobotCmdStatus | 64;
+			gchRobotCmdStatus = newgchRobotCmdStatus;
+		}
+	}
+	if (direction == 24){
+		directPointer = directPointer - 1;
+		printf("west\n");
+		if (maze[directPointer] == 1){
+			currentX =- 1;
+		}
+		else{
+			newgchRobotCmdStatus = gchRobotCmdStatus | 64;
+			gchRobotCmdStatus = newgchRobotCmdStatus;
+		}
+	}
+	if (direction == 16){
+		directPointer = directPointer + 1;
+		printf("east\n");
+		if (maze[directPointer] == 1){
+			currentX =+ 1;
+		}
+		else{
+			newgchRobotCmdStatus = gchRobotCmdStatus | 64;
+			gchRobotCmdStatus = newgchRobotCmdStatus;
+		}
+	}
+	
+	if(currentX == atoi(endX) && currentY == atoi(endY)){
+		gchRobotCmdStatus = gchRobotCmdStatus | 32;
+	}
+	printf("%c HAHAHAHA",maze[directPointer]);
+}
+
+void unsetCMD_TX(){
+	gchRobotCmdStatus=gchRobotCmdStatus-48;
+	int newStatus = gchRobotCmdStatus - 128;
+	gchRobotCmdStatus=newStatus+48;
+}
+
+void *robotThread(){
+	while(gchRobotCmdStatus>='50'){
+	printf("robotThreadinside");
+	currentX = atoi(startX);
+	currentY = atoi(startY);	
+	getMaze();
+	getMove();
+	unsetCMD_TX();	
+	}
+}
+
+
+int main () {
+	pthread_t thread_id1;
+	pthread_t thread_id2;
+    pthread_create(&thread_id1, NULL, controlThread, NULL);
+    pthread_create(&thread_id2, NULL, robotThread, NULL); 
+    pthread_join(thread_id2, NULL); 
+    pthread_join(thread_id1, NULL); 
+    printf("\nDone Control Thread\n"); 
+    printf("\nDone Robot Thread\n"); 
+	return 0;
+}
